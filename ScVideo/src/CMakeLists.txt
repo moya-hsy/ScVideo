@@ -1,9 +1,12 @@
 ﻿message(STATUS "================================================")
 
 file(GLOB_RECURSE CUR_PRJ_SRC
-    ${TOP_DIR}/src/*.h
-    ${TOP_DIR}/src/*.cpp
-    ${TOP_DIR}/src/*.ui)
+    ${TOP_DIR}/src/solution/*.h
+    ${TOP_DIR}/src/solution/*.cpp
+    ${TOP_DIR}/src/third/ffmpeg/*.h
+    ${TOP_DIR}/src/wid/*.h
+    ${TOP_DIR}/src/wid/*.cpp
+    ${TOP_DIR}/src/wid/*.ui)
 set(CUR_ALL_SRC
     main.cpp ${CUR_PRJ_SRC}
     ${TOP_DIR}/assets/appico/others.rc)
@@ -12,10 +15,19 @@ set(CUR_ALL_SRC
 message(STATUS "--add_executable")
 add_executable(${PROJECT_NAME} ${CUR_ALL_SRC})
 
-#target_link_libraries(${PROJECT_NAME} PRIVATE sk_base) //引入外部库
+target_include_directories(${PROJECT_NAME} PRIVATE ${TOP_DIR}/src/third/ffmpeg)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${TOP_DIR}/src)
+# include ffmpeg static libs
 
+target_link_libraries(${PROJECT_NAME} PRIVATE
+#    avcodec avformat avutil swscale)
+${TOP_DIR}/assets/prebuilt/windows/release/avcodec.lib
+${TOP_DIR}/assets/prebuilt/windows/release/avformat.lib
+${TOP_DIR}/assets/prebuilt/windows/release/avutil.lib
+${TOP_DIR}/assets/prebuilt/windows/release/postproc.lib
+${TOP_DIR}/assets/prebuilt/windows/release/swscale.lib
+${TOP_DIR}/assets/prebuilt/windows/release/swresample.lib
+)
 
 
 #----------- Remove the console of gui program
@@ -39,6 +51,9 @@ elseif(UNIX)
 else()
     message(SEND_ERROR "You are on an unsupported platform! (Not Win32, Mac OS X or Unix)")
 endif(WIN32)
+
+
+#find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
 #------------------------------------------------ Qt 依赖库/框架
 find_package(Qt5 COMPONENTS
@@ -68,4 +83,3 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 message(STATUS "================================================")
-

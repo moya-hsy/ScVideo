@@ -23,13 +23,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)  #存放可�
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)  #存放动态库文件
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)  #存放静态库文件
 
-
+set(TOP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 # ---------- 添加第三方库文件查找路径 #------ link_directories命令用于添加目录使链接器能在其查找库
 if(WIN32)
     if(MSVC)
         if(CMAKE_BUILD_TYPE STREQUAL "Release")
             link_directories(${TOP_DIR}/assets/prebuilt/windows/release)
             message(STATUS "build type: WIN32-MSVC-Release")
+            message(STATUS "${TOP_DIR}/assets/prebuilt/windows/release")
         elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
             link_directories(${TOP_DIR}/assets/prebuilt/windows/debug)
             message(STATUS "build type: WIN32-MSVC-Debug")
@@ -60,7 +61,6 @@ endif(WIN32)
 
 
 #----------------------------------------#
-set(TOP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(src)
 
 
