@@ -20,9 +20,10 @@ void ScreenRecord::defaultConfig()
     vs->quality = 40;
     vs->frame_width = 500;
     vs->frame_height = 880;
+    vs->addWatermark = false;
 
     //rrs
-    screen = QGuiApplication::primaryScreen();
+    QScreen *screen = QGuiApplication::primaryScreen();
     rrs->height = screen->size().height();
     rrs->width = screen->size().width();
     rrs->offset_x = 0;
@@ -30,12 +31,20 @@ void ScreenRecord::defaultConfig()
 
     //路径
     QString path = QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
-    outputPath = forge_outpath(path.toStdString());
+    recordOutputPath = forge_outpath(path.toStdString());
+    watermarkFileOutputPath = "";
+    watermarkPath = "";
 }
 
 ///参数设置函数
-void ScreenRecord::initConfigOfFullScreen(double fps, int quality, int timeLimit, int frame_height, int frame_width)
+void ScreenRecord::initConfigOfFullScreen(bool addWaterMark, double fps, int quality, int timeLimit, int frame_height, int frame_width)
 {
+    if(addWaterMark == true)
+    {
+        vs->addWatermark = true;
+    }else{
+        vs->addWatermark = false;
+    }
     if(fps <= 0)
     {
         vs->fps = 6;
@@ -69,7 +78,7 @@ void ScreenRecord::initConfigOfFullScreen(double fps, int quality, int timeLimit
             vs->frame_width = frame_width;
         }
     }
-    screen = QGuiApplication::primaryScreen();
+    QScreen *screen = QGuiApplication::primaryScreen();
     rrs->height = screen->size().height();
     rrs->width = screen->size().width();
     rrs->offset_x = 0;
@@ -79,7 +88,25 @@ void ScreenRecord::initConfigOfFullScreen(double fps, int quality, int timeLimit
 ///获取自定义地址
 void ScreenRecord::setOutputPath(QString path)
 {
-    outputPath = forge_outpath(path.toStdString());
+    recordOutputPath = forge_outpath(path.toStdString());
+}
+
+///获取水印图片地址
+void ScreenRecord::setWatermarkPath(QString path)
+{
+    if(path != "")
+    {
+        QFile checkValid(path);
+        if(checkValid.exists())
+        {
+            watermarkPath = path.toStdString();
+        }else{
+            QTextStream errorStream(stderr);
+            errorStream << "文件无效: " << path << endl;
+        }
+    }else{
+        vs->addWatermark = false;
+    }
 }
 
 ///录制地址修正
@@ -103,36 +130,86 @@ std::string ScreenRecord::forge_outpath(std::string outFilePath) {
     return outFilePath;
 }
 
-///路径信息检查
-void ScreenRecord::cleanOutputPath()
+///获取暂时输出文件名字
+std::string ScreenRecord::addMarkedToFileName(std::string path)
 {
-    QFile checkExistFile(QString::fromStdString(outputPath));
+    QFileInfo fileInfo(QString::fromStdString(path));
+
+    int lastDotPos = QString::fromStdString(path).lastIndexOf('.');
+    if(lastDotPos != -1 && lastDotPos < QString::fromStdString(path).length() - 1)
+    {
+        QString leftSuffix = QString::fromStdString(path).left(lastDotPos);
+
+        QString suffix = fileInfo.suffix();
+
+        QString markedFileName = leftSuffix + "-marked." + suffix;
+
+        return markedFileName.toStdString();
+    }
+
+    qDebug() << "转换失败";
+
+    return "";
+}
+
+///删除同名文件
+bool ScreenRecord::cleanOutputPath(std::string path)
+{
+    QFile checkExistFile(QString::fromStdString(path));
     if(checkExistFile.exists())
     {
         qDebug() << "文件已存在";
         if(checkExistFile.remove())
         {
             qDebug() << "同名文件已删除";
-        }else
-        {
+            return true;
+        }else{
             qDebug() << "同名文件删除失败";
+            return false;
         }
     }
+    return true;
+}
+
+///水印文件修改名字
+bool ScreenRecord::deleteAndRename(std::string deleteFilePath, std::string renameFilePath)
+{
+    QFile deleteFile(QString::fromStdString(deleteFilePath));
+    QFile renameFile(QString::fromStdString(renameFilePath));
+
+    if(deleteFile.exists() && renameFile.exists())
+    {
+        QString name = deleteFile.fileName();
+        if(cleanOutputPath(deleteFilePath))
+        {
+            if(renameFile.rename(name))
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }else{
+            qDebug() << "原文件无法删除";
+        }
+    }
+    return false;
 }
 
 ///打印配置信息
-void ScreenRecord::printCommand()
+void ScreenRecord::printVideoConfig()
 {
     qDebug() << "Values rrs: \nw*h: " << rrs->width << " x " << rrs->height << "\noffset: " << rrs->offset_x << ", " << rrs->offset_y << '\n';
     qDebug() << "values vs:"
              << "\nfps: " << vs->fps << "\nquality: " << vs->quality << "\ntime: " << QString::number(vs->recordTime) << "\n";
-    qDebug() << "Directory: " << QString::fromStdString(outputPath);
+    qDebug() << "录屏文件地址: " << QString::fromStdString(recordOutputPath);
+    qDebug() << "水印文件地址: " << QString::fromStdString(watermarkPath);
+    qDebug() << "加水印录屏文件地址: " << QString::fromStdString(watermarkFileOutputPath);
 }
 
-///设置命令
-QString ScreenRecord::getCommandLine()
+///设置录屏命令
+QString ScreenRecord::getRecordCommandLine()
 {
-    printCommand();
+    printVideoConfig();
 
     QString command;
     if(vs->scaleByFilter == true)
@@ -145,7 +222,7 @@ QString ScreenRecord::getCommandLine()
                   " -c:v libx264" +
                   " -t " + QString::number(vs->recordTime) +
                   " -pix_fmt yuv420p"
-                  " " + '"' + QString::fromStdString(outputPath) + '"';
+                  " " + '"' + QString::fromStdString(recordOutputPath) + '"';
     }
     else
     {
@@ -156,30 +233,93 @@ QString ScreenRecord::getCommandLine()
                   " -i desktop -qp " + QString::number(vs->quality) +
                   " -c:v libx264" +
                   " -pix_fmt yuv420p"
-                  " " + '"' + QString::fromStdString(outputPath) + '"';
+                  " " + '"' + QString::fromStdString(recordOutputPath) + '"';
     }
     return command;
 }
 
-/////开始录制
+///设置水印命令
+QString ScreenRecord::getWatermarkCommandLine()
+{
+    watermarkFileOutputPath = addMarkedToFileName(recordOutputPath);
+
+    QString command = "ffmpeg -i \"" + QString::fromStdString(recordOutputPath) + '"' +
+                      " -i " + '"' + QString::fromStdString(watermarkPath) + '"' +
+                      " -filter_complex overlay=10:10 -c:v libx264 " +
+                      '"' + QString::fromStdString(watermarkFileOutputPath) + '"';
+
+    return command;
+}
+
+///开始录制
 void ScreenRecord::record()
 {
-    cleanOutputPath();
-    startRecordCommand = getCommandLine();
-    qDebug() << "################命令行信息####################";
-    qDebug() << startRecordCommand;
+    if(cleanOutputPath(recordOutputPath))
+    {
+        QString startRecordCommand = getRecordCommandLine();
+        qDebug() << "################录屏命令行信息####################";
+        qDebug() << startRecordCommand;
 
-    recordProcess = new QProcess();
-    recordProcess->setProcessChannelMode(QProcess::MergedChannels);
+        recordProcess = new QProcess();
+        recordProcess->setProcessChannelMode(QProcess::MergedChannels);
 
-    recordStream = new QTextStream(recordProcess);
+        recordStream = new QTextStream(recordProcess);
 
-    qDebug() << "->开始录制";
+        qDebug() << "->->->->->->->->->->->->->->->->->->->->->->->->开始录制";
 
-    recordProcess->start(startRecordCommand);
+        recordProcess->start(startRecordCommand);
 
-    QObject::connect(recordProcess, &QProcess::readyReadStandardOutput, [&](){
-        qDebug() << recordProcess->readAll();
+        QObject::connect(recordProcess, &QProcess::readyReadStandardOutput, [&](){
+            qDebug() << recordProcess->readAll();
+            qInfo()<<u8"time:"<<QDateTime::currentDateTime();
+        });
+        if(vs->addWatermark == true && watermarkPath != "")
+        {
+            qDebug() << QString::fromStdString(watermarkFileOutputPath);
+            qDebug() << "条件成立-----------------------------------";
+            QObject::connect(recordProcess, SIGNAL(finished(int)), this, SLOT(startAddWatermark(int)));
+        }
+    }else{
+        qDebug() << "录制失败：输出文件有误";
+    }
+}
+
+///开始添加水印
+void ScreenRecord::startAddWatermark(int intExit)
+{
+    qDebug() << "触发";
+    addWatermarkProcess = new QProcess();
+    addWatermarkProcess->setProcessChannelMode(QProcess::MergedChannels);
+
+    QString addWatermarkCommandLine = getWatermarkCommandLine();
+    qDebug() << "#################加水印命令行信息#######################";
+    qDebug() << addWatermarkCommandLine;
+
+    qDebug() << "->->->->->->->->->->->->->->->->->->->->->->->->加水印";
+    addWatermarkProcess->start(addWatermarkCommandLine);
+
+    recordStream = new QTextStream(addWatermarkProcess);
+
+    QObject::connect(addWatermarkProcess, &QProcess::readyReadStandardOutput, [&](){
+        qDebug() << addWatermarkProcess->readAll();
         qInfo()<<u8"time:"<<QDateTime::currentDateTime();
     });
+
+    QObject::connect(addWatermarkProcess, SIGNAL(finished(int)), this, SLOT(getOutputFile(int)));
+}
+
+///获得输出文件
+void ScreenRecord::getOutputFile(int intExit)
+{
+    deleteAndRename(recordOutputPath, watermarkFileOutputPath);
+    qDebug() << "->->->->->->->->->->->->->->->->->->->->->->->->成功生成文件";
+}
+
+///停止录制
+void ScreenRecord::stopRecord()
+{
+    if (recordProcess->isOpen())
+    {
+        recordProcess->write("q");
+    }
 }

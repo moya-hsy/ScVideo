@@ -4,24 +4,21 @@
 #include <Qthread>
 #include <QFuture>
 #include <QtConcurrent/QtConcurrent>
-//#include "wid/scmainwindow.h"
+#include "wid/scmainwindow.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-//    ScMainWindow w;
-//    w.show();
+    ScMainWindow w;
+    w.show();
     //test-1
 //    ScreenRecord s;
-//    s.initConfigOfFullScreen(24, 25, 15);
-//    s.setOutputPath("C:/QT Project");
+//    s.initConfigOfFullScreen(true, 1, 1);
+//    s.setOutputPath("C:/QT Project/");
+//    s.setWatermarkPath("C:/KKtong/watermark.png");
 //    s.record();
-//    QTimer timer;
-//    timer.setSingleShot(true);
-//    timer.start(10000);
-//    QObject::connect(&timer, &QTimer::timeout, [&](){
-//        s.stopByCmd();
-//    });
+
+
 
     //test-2
 //    QThread t_a;
@@ -42,64 +39,63 @@ int main(int argc, char *argv[])
 //    t_a.wait();
 //    t_b.wait();
 
-    const int numThreads = 5;
-    QList<QThread*> threadList;
-    QList<ScreenRecord*> recordList;
-    qInfo()<<u8"===================== start =========================";
+//    const int numThreads = 5;
+//    QList<QThread*> threadList;
+//    QList<ScreenRecord*> recordList;
+//    qInfo()<<u8"===================== start =========================";
 
-    for (int i = 0; i < numThreads; ++i)
-    {
-        QThread* thread = new QThread();
-        ScreenRecord* record = new ScreenRecord();
+//    for (int i = 0; i < numThreads; ++i)
+//    {
+//        QThread* thread = new QThread();
+//        ScreenRecord* record = new ScreenRecord();
 
-        record->moveToThread(thread);
-        switch (i) {
-        case 0:
-            record->setOutputPath("C:/Project/11.mp4");
-            record->initConfigOfFullScreen(1, 40, 10, 1080);
-            break;
-        case 1:
-            record->setOutputPath("C:/Project/.mp4");
-            record->initConfigOfFullScreen(1, 41, 10, 720);
-            break;
-        case 2:
-            record->setOutputPath("C:/Project/158");
-            record->initConfigOfFullScreen(1, 40, 10, 500);
-            break;
-        case 3:
-            record->setOutputPath("C:/Project/");
-            record->initConfigOfFullScreen(1, 43, 10, 360);
-            break;
-        case 4:
-            record->setOutputPath("C:/QT Project/158");
-            record->initConfigOfFullScreen(1, 44, 10, 240);
-            break;
-        default:
-            break;
-        }
+//        record->moveToThread(thread);
+//        switch (i) {
+//        case 0:
+//            record->setOutputPath("C:/Project/11.mp4");
+//            record->initConfigOfFullScreen(true, 1, 40, 60);
+//            record->setWatermarkPath("C:/KKtong/watermark.png");
+//            break;
+//        case 1:
+//            record->setOutputPath("C:/Project/22.mp4");
+//            record->initConfigOfFullScreen(true, 1, 1, 60);
+//            record->setWatermarkPath("C:/KKtong/watermark.png");
+//            break;
+//        case 2:
+//            record->setOutputPath("C:/Project/33.mp4");
+//            record->initConfigOfFullScreen(false, 1, 1, 60);
+//            break;
+//        case 3:
+//            record->setOutputPath("C:/Project/");
+//            record->initConfigOfFullScreen(false, 1, 40, 10);
+//            break;
+//        case 4:
+//            record->setOutputPath("C:/Project/55.mp4");
+//            record->initConfigOfFullScreen(false, 1, 40, 60);
+//            record->setWatermarkPath("C:/KKtong/watermark.png");
+//            break;
+//        default:
+//            break;
+//        }
 
-        QObject::connect(thread, &QThread::started, record, &ScreenRecord::record);
+//        QObject::connect(thread, &QThread::started, record, &ScreenRecord::record);
 
-        threadList.append(thread);
-        recordList.append(record);
-        qInfo()<<u8"===================== case: "<<i;
-    }
-
-    for (int i = 0; i < numThreads; ++i)
-    {
-        threadList[i]->start();
-        qInfo()<<u8"===================== start thread: "<<i;
-    }
-
-    for (int i = 0; i < numThreads; ++i)
-    {
-        threadList[i]->wait();
-        //qInfo()<<u8"===================== start thread: "<<i;
-    }
+//        threadList.append(thread);
+//        recordList.append(record);
+//        qInfo()<<u8"===================== case: "<<i;
+//    }
 
 
 
-    qInfo()<<u8"===================== end =========================";
-    return 0;
-    //return a.exec();
+//    for (int i = 0; i < numThreads; ++i)
+//    {
+//        threadList[i]->wait();
+//        //qInfo()<<u8"===================== start thread: "<<i;
+//    }
+
+
+
+//    qInfo()<<u8"===================== end =========================";
+//    return 0;
+    return a.exec();
 }
